@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+
+    stages {
+        // Clone the repository
+        stage('Checkout') {
+            steps {
+                // Pull code from public GitHub repository
+                git url: 'https://github.com/Darksun2001/navyseal.git'
+            }
+        }
+
+        // Build the project
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        // Run unit tests
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        // OWASP Dependency-Check for security vulnerabilities
+        stage('OWASP Dependency Check') {
+            steps {
+                // Run OWASP Dependency Check
+                sh 'mvn org.owasp:dependency-check-maven:check'
+            }
+            post {
+                always {
+                    // Publish OWASP Dependency-Check report
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                }
+            }
+        }
+
+        // SonarQube static code analysis (SAST)
+        stage('SonarQube Analysis') {
+            steps {
+                // Run SonarQube scan
+                withSonarQubeEnv('SonarQubeServer') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        // Deploy step (optional, you can replace this with actual deployment steps)
+        stage('Deploy') {
+            steps {
+                echo 'Deploying the application...'
+            }
+        }
+    }
+
+    post {
+        // Notify success or failure
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
